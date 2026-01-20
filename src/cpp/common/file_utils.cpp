@@ -25,12 +25,13 @@ constexpr unsigned int word_size = 4;
 constexpr unsigned int ctrlpkt_offset_aie2 = 8 * word_size;
 
 // ELF OS ABI values for AIE architectures
-constexpr unsigned int os_abi_aie2p = 69;
-constexpr unsigned int os_abi_aie2ps = 64;
-constexpr unsigned int os_abi_aie2ps_group = 70;
-constexpr unsigned int os_abi_aie4 = 71;
-constexpr unsigned int os_abi_aie4a = 72;
-constexpr unsigned int os_abi_aiez = 73;
+// Values chosen with high Hamming distance for robustness against bit flips
+constexpr unsigned int os_abi_aie2p = 69;         // 0x45
+constexpr unsigned int os_abi_aie2ps = 64;        // 0x40
+constexpr unsigned int os_abi_aie2ps_group = 70;  // 0x46
+constexpr unsigned int os_abi_aie4 = 75;          // 0x4B
+constexpr unsigned int os_abi_aie4a = 86;         // 0x56
+constexpr unsigned int os_abi_aiez = 105;         // 0x69
 // ELF header is at least 52 bytes for 32-bit, 64 bytes for 64-bit
 constexpr unsigned int min_elf_header_size = 52;
 // EI_OSABI is at offset 7 in the ELF header

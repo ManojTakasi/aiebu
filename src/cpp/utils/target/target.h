@@ -123,11 +123,39 @@ class target_aie2_config: public target
   explicit target_aie2_config(const std::string& name): target(name, "aie2_config", "generate aie2 config elf") {}
 };
 
-class target_aie4: public target
+// Base class for AIE4 family asm targets (aie4, aie4a, aie4z)
+class target_aie4_base: public target
+{
+  protected:
+  aiebu::aiebu_assembler::buffer_type m_buffer_type;
+  void assemble_common(const sub_cmd_options &_options);
+
+  public:
+  target_aie4_base(const std::string& exename, const std::string& name,
+                   const std::string& description, aiebu::aiebu_assembler::buffer_type btype)
+    : target(exename, name, description), m_buffer_type(btype) {}
+  void assemble(const sub_cmd_options &_options) override { assemble_common(_options); }
+};
+
+class target_aie4: public target_aie4_base
 {
   public:
-  void assemble(const sub_cmd_options &_options) override;
-  explicit target_aie4(const std::string& name): target(name, "aie4", "aie4 asm assembler") {}
+  explicit target_aie4(const std::string& name)
+    : target_aie4_base(name, "aie4", "aie4 asm assembler", aiebu::aiebu_assembler::buffer_type::asm_aie4) {}
+};
+
+class target_aie4a: public target_aie4_base
+{
+  public:
+  explicit target_aie4a(const std::string& name)
+    : target_aie4_base(name, "aie4a", "aie4a asm assembler", aiebu::aiebu_assembler::buffer_type::asm_aie4a) {}
+};
+
+class target_aie4z: public target_aie4_base
+{
+  public:
+  explicit target_aie4z(const std::string& name)
+    : target_aie4_base(name, "aie4z", "aie4z asm assembler", aiebu::aiebu_assembler::buffer_type::asm_aiez) {}
 };
 
 class asm_config_parser: public target
@@ -150,11 +178,38 @@ class target_aie2ps_config: public asm_config_parser
   explicit target_aie2ps_config(const std::string& name): asm_config_parser(name, "aie2ps_config", "generate aie2ps config elf") {}
 };
 
-class target_aie4_config: public asm_config_parser
+// Base class for AIE4 family config targets
+class target_aie4_config_base: public asm_config_parser
+{
+  protected:
+  aiebu::aiebu_assembler::buffer_type m_buffer_type;
+
+  public:
+  target_aie4_config_base(const std::string& exename, const std::string& name,
+                          const std::string& description, aiebu::aiebu_assembler::buffer_type btype)
+    : asm_config_parser(exename, name, description), m_buffer_type(btype) {}
+  void assemble(const sub_cmd_options &_options) override;
+};
+
+class target_aie4_config: public target_aie4_config_base
 {
   public:
-  void assemble(const sub_cmd_options &_options) override;
-  explicit target_aie4_config(const std::string& name): asm_config_parser(name, "aie4_config", "generate aie4 config elf") {}
+  explicit target_aie4_config(const std::string& name)
+    : target_aie4_config_base(name, "aie4_config", "generate aie4 config elf", aiebu::aiebu_assembler::buffer_type::aie4_config) {}
+};
+
+class target_aie4a_config: public target_aie4_config_base
+{
+  public:
+  explicit target_aie4a_config(const std::string& name)
+    : target_aie4_config_base(name, "aie4a_config", "generate aie4a config elf", aiebu::aiebu_assembler::buffer_type::aie4a_config) {}
+};
+
+class target_aie4z_config: public target_aie4_config_base
+{
+  public:
+  explicit target_aie4z_config(const std::string& name)
+    : target_aie4_config_base(name, "aie4z_config", "generate aie4z config elf", aiebu::aiebu_assembler::buffer_type::aiez_config) {}
 };
 } //namespace aiebu::utilities
 

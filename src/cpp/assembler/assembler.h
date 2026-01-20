@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (C) 2024-2025, Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2024-2026, Advanced Micro Devices, Inc. All rights reserved.
 
 #ifndef _ADSM_COMMOM_ASSEMBLER_H_
 #define _ADSM_COMMOM_ASSEMBLER_H_
@@ -19,10 +19,6 @@ class preprocessor_input;
 
 class assembler
 {
-  std::unique_ptr<preprocessor> m_preprocessor;
-  std::unique_ptr<encoder> m_enoder;
-  std::unique_ptr<elf_writer> m_elfwriter;
-  std::shared_ptr<preprocessor_input> m_ppi;
 public:
   enum class elf_type
   {
@@ -33,9 +29,26 @@ public:
     aie2_config,
     aie4_asm,
     aie2ps_config,
-    aie4_config
+    aie4_config,
+    aie4a_asm,
+    aie4a_config,
+    aiez_asm,
+    aiez_config
   };
 
+private:
+  std::unique_ptr<preprocessor> m_preprocessor;
+  std::unique_ptr<encoder> m_enoder;
+  std::unique_ptr<elf_writer> m_elfwriter;
+  std::shared_ptr<preprocessor_input> m_ppi;
+  elf_type m_elf_type;
+
+  // Map .target directive value to expected elf_type
+  static std::string elf_type_to_target(elf_type type);
+  // Validate parsed .target against expected elf_type
+  void validate_target(const std::string& parsed_target) const;
+
+public:
   explicit assembler(const elf_type type);
 
   std::vector<char> process(const std::vector<char>& buffer1,

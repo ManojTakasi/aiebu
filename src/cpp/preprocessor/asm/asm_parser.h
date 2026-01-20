@@ -157,6 +157,14 @@ public:
   partition_directive& operator=(partition_directive&&) = default;
 };
 
+class target_directive: public directive
+{
+public:
+  target_directive() = default;
+  void operate(std::shared_ptr<asm_parser> parserptr, const smatch& sm) override;
+  ~target_directive() override = default;
+};
+
 class asm_data
 {
   std::shared_ptr<operation> m_op;
@@ -285,6 +293,7 @@ class end_of_label_directive;
 class pad_directive;
 class section_directive;
 class partition_directive;
+class target_directive;
 
 class asm_parser: public std::enable_shared_from_this<asm_parser>
 {
@@ -299,6 +308,7 @@ class asm_parser: public std::enable_shared_from_this<asm_parser>
   std::vector<annotation_type> m_annotation_list;
   std::shared_ptr<partition_info> m_partition;
   const file_artifact* m_artifacts;
+  std::string m_target;  // Stores .target directive value (e.g., "aie2ps", "aie4", "aie4-a", "aie4-z")
 public:
   asm_parser(const std::vector<char>& data, const std::vector<std::string>& include_list, const file_artifact* artifacts = nullptr):m_data(data),  m_include_list(include_list), m_artifacts(artifacts)
   {
@@ -351,6 +361,10 @@ public:
   col_data& get_col_asmdata(uint32_t colnum);
 
   std::shared_ptr<const partition_info> get_partition_info() const { return std::const_pointer_cast<const partition_info>(m_partition); }
+
+  const std::string& get_target() const { return m_target; }
+  void set_target(const std::string& target) { m_target = target; }
+  bool has_target() const { return !m_target.empty(); }
 
   void set_numcolumn(uint32_t val) { m_partition->set_numcolumn(val); }
 

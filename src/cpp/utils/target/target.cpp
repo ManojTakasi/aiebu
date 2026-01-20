@@ -334,7 +334,7 @@ target_aie2_config::assemble(const sub_cmd_options &options)
 
 void
 aiebu::utilities::
-target_aie4::assemble(const sub_cmd_options &_options)
+target_aie4_base::assemble_common(const sub_cmd_options &_options)
 {
   std::string output_elffile;
   std::string input_file;
@@ -342,7 +342,8 @@ target_aie4::assemble(const sub_cmd_options &_options)
   std::vector<std::string> libpaths;
   std::vector<std::string> flags;
 
-  cxxopts::Options all_options("Target aie4 Options", m_description);
+  std::string options_name = "Target " + m_sub_target_name + " Options";
+  cxxopts::Options all_options(options_name, m_description);
 
   try {
     all_options.add_options()
@@ -358,7 +359,7 @@ target_aie4::assemble(const sub_cmd_options &_options)
     auto result = all_options.parse(static_cast<int>(char_ver.size()), char_ver.data());
 
     if (result.count("help")) {
-      std::cout << all_options.help({"", "Target aie4 Options"});
+      std::cout << all_options.help({"", options_name});
       return;
     }
 
@@ -387,7 +388,7 @@ target_aie4::assemble(const sub_cmd_options &_options)
 
   }
   catch (const cxxopts::exceptions::exception& e) {
-    std::cout << all_options.help({"", "Target aie4 Options"});
+    std::cout << all_options.help({"", options_name});
     auto errMsg = boost::format("Error parsing options: %s\n") % e.what() ;
     throw std::runtime_error(errMsg.str());
   }
@@ -395,13 +396,12 @@ target_aie4::assemble(const sub_cmd_options &_options)
   std::vector<char> asmBuffer;
   readfile(input_file, asmBuffer);
 
-
   std::vector<char> patch_data_buffer;
   if (!external_buffers_file.empty())
     readfile(external_buffers_file, patch_data_buffer);
 
   try {
-    aiebu::aiebu_assembler as(aiebu::aiebu_assembler::buffer_type::asm_aie4, asmBuffer, flags, libpaths, patch_data_buffer);
+    aiebu::aiebu_assembler as(m_buffer_type, asmBuffer, flags, libpaths, patch_data_buffer);
     write_elf(as, output_elffile);
   } catch (aiebu::error &ex) {
     auto errMsg = boost::format("Error: %s, code:%d\n") % ex.what() % ex.get_code() ;
@@ -491,13 +491,13 @@ target_aie2ps_config::assemble(const sub_cmd_options &options)
 
 void
 aiebu::utilities::
-target_aie4_config::assemble(const sub_cmd_options &options)
+target_aie4_config_base::assemble(const sub_cmd_options &options)
 {
- if (!parser(options))
+  if (!parser(options))
     return;
 
- try {
-    aiebu::aiebu_assembler as(aiebu::aiebu_assembler::buffer_type::aie4_config, {}, flags, libpaths, json_buffer);
+  try {
+    aiebu::aiebu_assembler as(m_buffer_type, {}, flags, libpaths, json_buffer);
     write_elf(as, output_elffile);
   }
   catch (aiebu::error &ex) {

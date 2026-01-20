@@ -30,6 +30,7 @@ class aie2ps_preprocessed_output : public preprocessed_output
   std::shared_ptr<const partition_info> m_partition;
   std::map<std::string, std::vector<char>> m_ctrlpkt;
   std::map<uint32_t, std::string> m_ctrlpkt_id_map;
+  std::string m_target;  // Target from .target directive (e.g., "aie2ps", "aie4", "aie4-a", "aie4-z")
 public:
 
   explicit aie2ps_preprocessed_output(std::shared_ptr<const partition_info> partition): m_partition(std::move(partition)) {}
@@ -99,6 +100,21 @@ public:
   void set_ctrlpkt_id_map( std::map<uint32_t, std::string>& ctrlpkt_id_map)
   {
     m_ctrlpkt_id_map = ctrlpkt_id_map;
+  }
+
+  void set_target(const std::string& target)
+  {
+    m_target = target;
+  }
+
+  const std::string& get_target() const
+  {
+    return m_target;
+  }
+
+  bool has_target() const
+  {
+    return !m_target.empty();
   }
 };
 

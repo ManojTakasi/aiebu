@@ -44,12 +44,13 @@ class transform_manager {
   static constexpr size_t ctrlcode_string_length = 13;     // Length of "control-code" prefix
 
   // AIE ELF OS ABI identifiers
-  static constexpr uint8_t elf_amd_aie2ps       = 64;      // AIE2PS ELF format
-  static constexpr uint8_t elf_amd_aie2p        = 69;      // AIE2P ELF format
-  static constexpr uint8_t elf_amd_aie2ps_group = 70;      // AIE2PS/AIE4 group ELF format
-  static constexpr uint8_t elf_amd_aie4         = 71;      // AIE4 ELF format
-  static constexpr uint8_t elf_amd_aie4a        = 72;      // AIE4A ELF format
-  static constexpr uint8_t elf_amd_aiez         = 73;      // AIEZ ELF format
+  // Values chosen with high Hamming distance for robustness against bit flips
+  static constexpr uint8_t elf_amd_aie2ps       = 64;      // 0x40 AIE2PS ELF format
+  static constexpr uint8_t elf_amd_aie2p        = 69;      // 0x45 AIE2P ELF format
+  static constexpr uint8_t elf_amd_aie2ps_group = 70;      // 0x46 AIE2PS/AIE4 group ELF format
+  static constexpr uint8_t elf_amd_aie4         = 75;      // 0x4B AIE4 ELF format
+  static constexpr uint8_t elf_amd_aie4a        = 86;      // 0x56 AIE4A ELF format
+  static constexpr uint8_t elf_amd_aiez         = 105;     // 0x69 AIEZ ELF format
 
   // Register offset multiplier (2 for 32-bit registers = 64-bit offset)
   static constexpr uint8_t num_32bit_register = 2;
