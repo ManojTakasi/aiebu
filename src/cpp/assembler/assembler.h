@@ -9,6 +9,7 @@
 #include <map>
 #include "aiebu/aiebu_assembler.h"
 #include "symbol.h"
+#include "utils.h"
 
 namespace aiebu {
 
@@ -42,9 +43,11 @@ private:
   // Check if target from .target directive belongs to expected family for elf_type
   // Returns true if valid, throws error if mismatch
   void validate_target_family(const std::string& parsed_target) const;
+  void validate_target_family(std::shared_ptr<const target_info> target) const;
 
   // Configure ELF writer based on .target directive (sets OSABI and version)
   void configure_elf_for_target(const std::string& parsed_target);
+  void configure_elf_for_target(std::shared_ptr<const target_info> target);
 
 public:
   explicit assembler(const elf_type type);

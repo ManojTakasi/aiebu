@@ -86,6 +86,18 @@ validate_target_family(const std::string& parsed_target) const
 
 void
 assembler::
+validate_target_family(std::shared_ptr<const target_info> target) const
+{
+  if (!target || !target->is_set())
+    return;
+
+  // Build full target string from target_info
+  std::string full_target = target->get_full_target();
+  validate_target_family(full_target);
+}
+
+void
+assembler::
 configure_elf_for_target(const std::string& parsed_target)
 {
   std::string normalized = normalize_target_format(parsed_target);
@@ -136,6 +148,23 @@ configure_elf_for_target(const std::string& parsed_target)
   // Configure the ELF writer with new OS ABI and version
   m_elfwriter->set_os_abi(os_abi);
   m_elfwriter->set_abi_version(version);
+}
+
+void
+assembler::
+configure_elf_for_target(std::shared_ptr<const target_info> target)
+{
+  if (!target || !target->is_set())
+    return;
+
+  // Build the normalized target string from target_info
+  // arch = "aie4", sub_arch = "a" -> "aie4a"
+  // arch = "aie4", sub_arch = "" -> "aie4"
+  std::string full_target = target->get_arch();
+  if (target->has_sub_arch())
+    full_target += target->get_sub_arch();
+
+  configure_elf_for_target(full_target);
 }
 
 assembler::
@@ -216,18 +245,35 @@ process(const std::vector<char>& buffer1,
   m_ppi->set_args(buffer1, patch_json, buffer2, libs, libpaths, ctrlpkt, artifacts);
   auto ppo = m_preprocessor->process(m_ppi);
 
-  // TODO: Integrate with upstream .target parsing
-  // Once upstream provides has_target() and get_target() methods on the preprocessed output,
-  // uncomment the following to enable OSABI/version configuration:
-  //
-  // auto aie2ps_output = std::dynamic_pointer_cast<aie2ps_preprocessed_output>(ppo);
-  // if (aie2ps_output && aie2ps_output->has_target()) {
-  //   // .target is present in ASM:
-  //   // 1. Validate that target belongs to correct family for the -t option
-  //   // 2. Configure ELF with new version (0x04/0x05) and specific OSABI
-  //   validate_target_family(aie2ps_output->get_target());
-  //   configure_elf_for_target(aie2ps_output->get_target());
-  // }
+  // Check if .target directive is present and configure ELF accordingly
+  // Try non-config output first
+  std::shared_ptr<const target_info> target;
+  auto aie2ps_output = std::dynamic_pointer_cast<aie2ps_preprocessed_output>(ppo);
+  if (aie2ps_output) {
+    target = aie2ps_output->get_target_info();
+  } else {
+    // Try config output - get target from first instance
+    auto config_output = std::dynamic_pointer_cast<asm_config_preprocessed_output<aie2ps_preprocessed_output>>(ppo);
+    if (config_output) {
+      const auto& kernel_map = config_output->get_kernel_map();
+      if (!kernel_map.empty()) {
+        const auto& instances = kernel_map.begin()->second;
+        if (!instances.empty()) {
+          const auto& first_instance = instances.begin()->second;
+          if (first_instance)
+            target = first_instance->get_target_info();
+        }
+      }
+    }
+  }
+
+  if (target && target->is_set()) {
+    // .target is present in ASM:
+    // 1. Validate that target belongs to correct family for the -t option
+    // 2. Configure ELF with new version (0x04/0x05) and specific OSABI
+    validate_target_family(target);
+    configure_elf_for_target(target);
+  }
   // If no .target directive: ELF writer keeps legacy defaults
   // (version 0x02/0x03, OSABI = aie2ps_group = 0x46)
 
