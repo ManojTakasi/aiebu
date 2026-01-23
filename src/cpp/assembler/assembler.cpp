@@ -102,27 +102,18 @@ configure_elf_for_target(const std::string& parsed_target)
 {
   std::string normalized = normalize_target_format(parsed_target);
 
-  // Import constants from aie4_elfwriter.h
-  // These are also defined there but we need them here
-  constexpr unsigned char OSABI_AIE2PS       = 0x40;  // 64
-  constexpr unsigned char OSABI_AIE4         = 0x4B;  // 75
-  constexpr unsigned char OSABI_AIE4A        = 0x56;  // 86
-  constexpr unsigned char OSABI_AIE4Z        = 0x69;  // 105
-  constexpr unsigned char ELF_ABI_VERSION_NEW        = 0x04;
-  constexpr unsigned char ELF_ABI_VERSION_NEW_CONFIG = 0x05;
-
   unsigned char os_abi = 0;
   unsigned char version = 0;
 
   // Determine OS ABI based on specific target
   if (normalized == "aie2ps") {
-    os_abi = OSABI_AIE2PS;
+    os_abi = osabi_aie2ps;
   } else if (normalized == "aie4") {
-    os_abi = OSABI_AIE4;
+    os_abi = osabi_aie4;
   } else if (normalized == "aie4a") {
-    os_abi = OSABI_AIE4A;
+    os_abi = osabi_aie4a;
   } else if (normalized == "aie4z") {
-    os_abi = OSABI_AIE4Z;
+    os_abi = osabi_aie4z;
   } else {
     throw error(error::error_code::invalid_asm,
                 "Unknown target in .target directive: " + parsed_target);
@@ -132,12 +123,12 @@ configure_elf_for_target(const std::string& parsed_target)
   switch (m_elf_type) {
     case elf_type::aie4_asm:
     case elf_type::aie2ps_asm:
-      version = ELF_ABI_VERSION_NEW;
+      version = elf_abi_version_new;
       break;
 
     case elf_type::aie4_config:
     case elf_type::aie2ps_config:
-      version = ELF_ABI_VERSION_NEW_CONFIG;
+      version = elf_abi_version_new_config;
       break;
 
     default:

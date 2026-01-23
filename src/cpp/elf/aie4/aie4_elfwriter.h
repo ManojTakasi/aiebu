@@ -10,19 +10,19 @@ namespace aiebu {
 
 // OS/ABI values for AIE architectures
 // Values chosen with high Hamming distance for robustness against bit flips
-constexpr unsigned char OSABI_AIE2PS_GROUP = 0x46;  // 70 - Legacy group ELF (for backward compatibility)
-constexpr unsigned char OSABI_AIE2PS       = 0x40;  // 64 - AIE2PS specific (when .target aie2ps is present)
-constexpr unsigned char OSABI_AIE4         = 0x4B;  // 75 - AIE4
-constexpr unsigned char OSABI_AIE4A        = 0x56;  // 86 - AIE4A
-constexpr unsigned char OSABI_AIE4Z        = 0x69;  // 105 - aie4z
+constexpr unsigned char osabi_aie2ps_group = 0x46;  // 70 - Legacy group ELF (for backward compatibility)
+constexpr unsigned char osabi_aie2ps       = 0x40;  // 64 - AIE2PS specific (when .target aie2ps is present)
+constexpr unsigned char osabi_aie4         = 0x4B;  // 75 - AIE4
+constexpr unsigned char osabi_aie4a        = 0x56;  // 86 - AIE4A
+constexpr unsigned char osabi_aie4z        = 0x69;  // 105 - aie4z
 
 // ELF ABI versions:
-// Legacy (no .target in ASM): 0x02 (non-config), 0x03 (config) - uses OSABI_AIE2PS_GROUP
+// Legacy (no .target in ASM): 0x02 (non-config), 0x03 (config) - uses osabi_aie2ps_group
 // New (with .target in ASM): 0x04 (non-config), 0x05 (config) - uses specific OSABI
-constexpr unsigned char ELF_ABI_VERSION_LEGACY        = 0x02;
-constexpr unsigned char ELF_ABI_VERSION_LEGACY_CONFIG = 0x03;
-constexpr unsigned char ELF_ABI_VERSION_NEW           = 0x04;
-constexpr unsigned char ELF_ABI_VERSION_NEW_CONFIG    = 0x05;
+constexpr unsigned char elf_abi_version_legacy        = 0x02;
+constexpr unsigned char elf_abi_version_legacy_config = 0x03;
+constexpr unsigned char elf_abi_version_new           = 0x04;
+constexpr unsigned char elf_abi_version_new_config    = 0x05;
 
 /**
  * @brief AIE4 family ELF writer
