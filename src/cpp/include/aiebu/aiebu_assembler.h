@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (C) 2024-2025, Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2024-2026, Advanced Micro Devices, Inc. All rights reserved.
 #ifndef AIEBU_ASSEMBLER_H_
 #define AIEBU_ASSEMBLER_H_
 #include <cstdint>

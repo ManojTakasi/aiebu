@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (C) 2025 Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2025-2026 Advanced Micro Devices, Inc. All rights reserved.
 
 #include <cstdint>
 #include <cctype>
@@ -70,11 +70,11 @@ load_elf(const std::vector<char>& elf_data)
 
   // Legacy ELF (version 0x02/0x03): only aie2ps_group is supported
   // New ELF (version 0x04/0x05): aie2ps_group, aie2ps, aie4, aie4a, aie4z are supported
-  if (abi_version == elf_abi_version_legacy || abi_version == elf_abi_version_legacy_config) {
+  if (abi_version == elf_version_legacy || abi_version == elf_version_legacy_config) {
     // Legacy ELF - only aie2ps_group
     if (os_abi != osabi_aie2ps_group)
       throw error(error::error_code::invalid_input, "Only aie2ps_group elf supported for legacy ELF version\n");
-  } else if (abi_version == elf_abi_version_new || abi_version == elf_abi_version_new_config) {
+  } else if (abi_version == elf_version_new || abi_version == elf_version_new_config) {
     // New ELF - aie2ps_group, aie2ps, or aie4 family
     if (os_abi != osabi_aie2ps_group &&
         os_abi != osabi_aie2ps &&
@@ -1002,13 +1002,13 @@ update_rela_sections(const std::vector<arginfo>& entries, const std::string& ker
 
    // Legacy ELF (version 0x02/0x03): only aie2ps_group is supported
    // New ELF (version 0x04/0x05): aie2ps_group, aie2ps, aie4, aie4a, aie4z are supported
-   if (abi_version == elf_abi_version_legacy || abi_version == elf_abi_version_legacy_config) {
+   if (abi_version == elf_version_legacy || abi_version == elf_version_legacy_config) {
      // Legacy ELF - only aie2ps_group
      if (os_abi != osabi_aie2ps_group)
        throw error(error::error_code::invalid_input,
                    "update_kernel_name only supports OS ABI 0x46 for legacy ELF version, got: 0x"
                    + ELFIO::to_hex_string(os_abi));
-   } else if (abi_version == elf_abi_version_new || abi_version == elf_abi_version_new_config) {
+   } else if (abi_version == elf_version_new || abi_version == elf_version_new_config) {
      // New ELF - aie2ps_group, aie2ps, or aie4 family
      if (os_abi != osabi_aie2ps_group &&
          os_abi != osabi_aie2ps &&

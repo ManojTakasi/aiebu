@@ -10,23 +10,23 @@ namespace aiebu {
 
 class aie2ps_elf_writer: public elf_writer
 {
-  constexpr static unsigned char ob_abi = 0x46;
-  constexpr static unsigned char version = 0x02;
+  constexpr static unsigned char osabi_aie2ps_group   = 0x46;
+  constexpr static unsigned char elf_version_legacy = 0x02;
 public:
-  aie2ps_elf_writer(): elf_writer(ob_abi, version)
+  aie2ps_elf_writer(): elf_writer(osabi_aie2ps_group, elf_version_legacy)
   { }
 };
 
 class aie2ps_config_elf_writer: public elf_writer
 {
-  constexpr static unsigned char ob_abi = 0x46;
-  constexpr static unsigned char version = 0x03;
+  constexpr static unsigned char osabi_aie2ps_group   = 0x46;
+  constexpr static unsigned char elf_version_legacy_config = 0x03;
   const std::string const_configuration = "configuration";
   const std::string xrt_configuration = ".note.xrt.configuration";
   const std::string const_kernel_signature = "kernel.signature";
 
 public:
-  aie2ps_config_elf_writer(): elf_writer(ob_abi, version)
+  aie2ps_config_elf_writer(): elf_writer(osabi_aie2ps_group, elf_version_legacy_config)
   { }
 
   /**

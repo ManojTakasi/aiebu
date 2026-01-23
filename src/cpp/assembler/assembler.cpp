@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (C) 2024-2025, Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2024-2026, Advanced Micro Devices, Inc. All rights reserved.
 #include "assembler.h"
 
 #include "aie2ps_preprocessed_output.h"
@@ -123,12 +123,12 @@ configure_elf_for_target(const std::string& parsed_target)
   switch (m_elf_type) {
     case elf_type::aie4_asm:
     case elf_type::aie2ps_asm:
-      version = elf_abi_version_new;
+      version = elf_version_new;
       break;
 
     case elf_type::aie4_config:
     case elf_type::aie2ps_config:
-      version = elf_abi_version_new_config;
+      version = elf_version_new_config;
       break;
 
     default:
