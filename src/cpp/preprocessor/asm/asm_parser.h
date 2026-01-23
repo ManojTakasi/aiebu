@@ -157,6 +157,30 @@ public:
   partition_directive& operator=(partition_directive&&) = default;
 };
 
+class target_directive: public directive
+{
+public:
+  target_directive() = default;
+  void operate(std::shared_ptr<asm_parser> parserptr, const smatch& sm) override;
+  ~target_directive() override = default;
+  target_directive(const target_directive&) = default;
+  target_directive& operator=(const target_directive&) = default;
+  target_directive(target_directive&&) = default;
+  target_directive& operator=(target_directive&&) = default;
+};
+
+class aie_row_topology_directive: public directive
+{
+public:
+  aie_row_topology_directive() = default;
+  void operate(std::shared_ptr<asm_parser> parserptr, const smatch& sm) override;
+  ~aie_row_topology_directive() override = default;
+  aie_row_topology_directive(const aie_row_topology_directive&) = default;
+  aie_row_topology_directive& operator=(const aie_row_topology_directive&) = default;
+  aie_row_topology_directive(aie_row_topology_directive&&) = default;
+  aie_row_topology_directive& operator=(aie_row_topology_directive&&) = default;
+};
+
 class asm_data
 {
   std::shared_ptr<operation> m_op;
@@ -285,6 +309,8 @@ class end_of_label_directive;
 class pad_directive;
 class section_directive;
 class partition_directive;
+class target_directive;
+class aie_row_topology_directive;
 
 class asm_parser: public std::enable_shared_from_this<asm_parser>
 {
@@ -298,6 +324,8 @@ class asm_parser: public std::enable_shared_from_this<asm_parser>
   bool annotation_state = false;
   std::vector<annotation_type> m_annotation_list;
   std::shared_ptr<partition_info> m_partition;
+  std::shared_ptr<target_info> m_target;
+  std::shared_ptr<aie_row_topology_info> m_aie_row_topology;
   const file_artifact* m_artifacts;
 public:
   asm_parser(const std::vector<char>& data, const std::vector<std::string>& include_list, const file_artifact* artifacts = nullptr):m_data(data),  m_include_list(include_list), m_artifacts(artifacts)
@@ -305,6 +333,8 @@ public:
     set_data_state(false);
     m_current_col = -1;
     m_partition = std::make_shared<partition_info>(DEFAULT_COLUMN, 0);
+    m_target = std::make_shared<target_info>();
+    m_aie_row_topology = std::make_shared<aie_row_topology_info>();
   }
   void set_data_state(bool state) { isdatastack.push(state); }
 
@@ -357,6 +387,26 @@ public:
   void set_numcore(uint32_t val) { m_partition->set_numcore(val); }
 
   void set_nummem(uint32_t val) { m_partition->set_nummem(val); }
+
+  // Target info getters and setters
+  std::shared_ptr<const target_info> get_target_info() const { return std::const_pointer_cast<const target_info>(m_target); }
+
+  void set_target_arch(const std::string& arch) { m_target->set_arch(arch); }
+
+  void set_target_sub_arch(const std::string& sub_arch) { m_target->set_sub_arch(sub_arch); }
+
+  // AIE row topology info getters and setters
+  std::shared_ptr<const aie_row_topology_info> get_aie_row_topology_info() const { return std::const_pointer_cast<const aie_row_topology_info>(m_aie_row_topology); }
+
+  void set_num_south_shim(uint32_t val) { m_aie_row_topology->set_num_south_shim(val); }
+
+  void set_num_memtile_row(uint32_t val) { m_aie_row_topology->set_num_memtile_row(val); }
+
+  void set_num_coretile_row(uint32_t val) { m_aie_row_topology->set_num_coretile_row(val); }
+
+  void set_num_north_shim(uint32_t val) { m_aie_row_topology->set_num_north_shim(val); }
+
+  void set_aie_row_topology_is_set(bool val) { m_aie_row_topology->set_is_set(val); }
 
   void parse_lines();
 

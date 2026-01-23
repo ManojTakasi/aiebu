@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (C) 2024-2025, Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2024-2026, Advanced Micro Devices, Inc. All rights reserved.
 
 #include "ops.h"
 #include "aiebu/aiebu_error.h"
@@ -124,7 +124,7 @@ serialize(std::shared_ptr<assembler_state> state, std::vector<symbol>& symbols,
           // Beyond that its elfloader/host responsibility to patch mandatorily
           if (val > 6 && val != offset_type_marker)
             log_warn() << "Apply_offset_57 has arg index " << val << " > 6, Should be mandatorily patched in host!!!";
-          else if (val != offset_type_marker)
+          if (val != offset_type_marker)
           {
             // val is arg index, to get offset x2
             val = val * 2;
@@ -367,11 +367,13 @@ handle_barrier_arg(uint32_t val)
 
 std::string
 isa_op_deserializer::
-handle_page_id_arg(uint32_t val,
+handle_page_id_arg(uint32_t /*val*/,
                     std::shared_ptr<disassembler_state> state)
 {
+  // PAGE_ID arguments reference text sections that come later
+  // Add to OOO label queue to be written at the start of the target section
   std::string label = get_label();
-  state->add_external_label(val, label);
+  state->add_ooo_label(label);
   return label;
 }
 

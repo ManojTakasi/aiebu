@@ -82,10 +82,25 @@ public:
 
     parser->parse_lines();
 
+    // Verify .target directive matches the -t command line option
+    auto target_info = parser->get_target_info();
+    std::string expected_target = tinput->get_expected_target();
+    if (target_info->is_set()) {
+      std::string asm_target = target_info->get_arch();
+      if (asm_target != expected_target) {
+        throw error(error::error_code::invalid_asm,
+          "Target mismatch: .target directive specifies '" + target_info->get_full_target() +
+          "' but -t option specifies '" + expected_target + "'\n");
+      }
+      log_info() << "Target verification passed: " << target_info->get_full_target() << std::endl;
+    }
+
     auto collist = parser->get_col_list();
     isa i;
     m_isa = i.get_isamap();
-    auto toutput = std::make_shared<aie2ps_preprocessed_output>(parser->get_partition_info());
+    auto toutput = std::make_shared<aie2ps_preprocessed_output>(parser->get_partition_info(),
+                                                                parser->get_target_info(),
+                                                                parser->get_aie_row_topology_info());
     toutput->set_debug(debug_flag);
     auto& controlpkts = tinput->get_controlpkt();
     auto& ctrlpkt_id_map = tinput->get_ctrlpkt_id_map();

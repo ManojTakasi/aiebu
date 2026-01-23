@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
-// Copyright (C) 2025, Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2025-2026, Advanced Micro Devices, Inc. All rights reserved.
 #include "disassembler/disassembler.h"
 #include <fstream>
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <set>
 
 namespace aiebu {
 
@@ -21,6 +22,8 @@ static constexpr size_t page_header_magic_byte_0 = 0;       // First magic byte 
 static constexpr size_t page_header_magic_byte_1 = 1;       // Second magic byte offset
 static constexpr size_t page_header_cur_len_low = 8;        // Current page length low byte offset
 static constexpr size_t page_header_cur_len_high = 9;       // Current page length high byte offset
+static constexpr size_t page_header_in_order_len_low = 10;  // In-order page length low byte offset
+static constexpr size_t page_header_in_order_len_high = 11; // In-order page length high byte offset
 
 // Magic Values
 static constexpr uint8_t page_header_magic = 0xFF;          // Page header magic byte value
@@ -42,25 +45,35 @@ static constexpr size_t byte_shift = 8;                    // Bit shift for byte
 
 // Base class constructor
 asm_disassembler::asm_disassembler(std::ostream& output_stream)
-    : m_asm_writer(output_stream), m_target_arch("") {
+    : m_asm_writer(output_stream), m_buffer_type(aiebu_assembler::buffer_type::unspecified) {
     isa_op_map = isa_disasm.get_isa_map();
 }
 
+// Create architecture-specific disassembler state based on buffer_type
+std::shared_ptr<disassembler_state> asm_disassembler::create_disassembler_state() const {
+    switch (m_buffer_type) {
+        case aiebu_assembler::buffer_type::elf_aie4:
+        case aiebu_assembler::buffer_type::blob_aie4:
+            return std::make_shared<disassembler_state_aie4>();
+        default:
+            // Default to aie2ps for aie2ps, aie2, aie2p, or unknown architectures
+            return std::make_shared<disassembler_state_aie2ps>();
+    }
+}
+
 // Common helper to write text section header
+// Use .section directive so assembler switches to text mode after EOF
 void asm_disassembler::add_text_sec_comment() {
     m_asm_writer.write_directive("");
-    m_asm_writer.write_directive(";");
-    m_asm_writer.write_directive(";text");
-    m_asm_writer.write_directive(";");
+    m_asm_writer.write_directive(".section .ctrltext");
     m_asm_writer.write_directive("");
 }
 
 // Common helper to write data section header
+// Use .section directive for consistency (assembler switches to data mode after EOF anyway)
 void asm_disassembler::add_data_sec_comment() {
     m_asm_writer.write_directive("");
-    m_asm_writer.write_directive(";");
-    m_asm_writer.write_directive(";data");
-    m_asm_writer.write_directive(";");
+    m_asm_writer.write_directive(".section .ctrldata");
     m_asm_writer.write_directive("");
 }
 
@@ -136,14 +149,13 @@ void asm_disassembler::process_data_block(const char* data, size_t size,
 }
 
 // ELF disassembler constructor
-elf_asm_disassembler::elf_asm_disassembler(const std::string& input_elf_path, std::ostream& output_stream)
+elf_asm_disassembler::elf_asm_disassembler(const std::string& input_elf_path, std::ostream& output_stream,
+                                          aiebu_assembler::buffer_type buffer_type)
     : asm_disassembler(output_stream) {
     if (!m_elf_reader.load(input_elf_path)) {
         throw error(error::error_code::invalid_elf, "Failed to load ELF:" + input_elf_path + "\n");
     }
-    // Set target architecture from ELF header (EI_OSABI)
-    // For now, default to aie2ps; future: extract from ELF header byte 7
-    m_target_arch = "aie2ps";
+    m_buffer_type = buffer_type;
 }
 
 // ELF disassembler run method
@@ -156,33 +168,11 @@ bin_asm_disassembler::bin_asm_disassembler(const std::vector<char>& binary_data,
                                           std::ostream& output_stream, 
                                           aiebu_assembler::buffer_type buffer_type)
     : asm_disassembler(output_stream), m_binary_data(binary_data) {
-    // Set target architecture from buffer type
-    switch (buffer_type) {
-        case aiebu_assembler::buffer_type::blob_aie2ps:
-            m_target_arch = "aie2ps";
-            break;
-        case aiebu_assembler::buffer_type::blob_aie4:
-            m_target_arch = "aie4";
-            break;
-        default:
-            m_target_arch = "unknown";
-            break;
-    }
-    
-    // TODO: Load architecture-specific ISA when differences emerge between aie2ps and aie4
-    // Currently both use the same ISA specification from specification/aie2ps/isa.h
-    // Future implementation:
-    //   if (m_target_arch == "aie4") {
-    //     // Load aie4-specific ISA from specification/aie4/isa.h
-    //     isa_disasm_aie4 aie4_disasm;
-    //     isa_op_map = aie4_disasm.get_isa_map();
-    //   } else {
-    //     // Load aie2ps ISA (default)
-    //     isa_op_map = isa_disasm.get_isa_map();
-    //   }
+    m_buffer_type = buffer_type;
     
     // Output target architecture information for binary files
-    m_asm_writer.write_directive("; Target Architecture: " + m_target_arch);
+    std::string arch_name = (buffer_type == aiebu_assembler::buffer_type::blob_aie4) ? "aie4" : "aie2ps";
+    m_asm_writer.write_directive("; Target Architecture: " + arch_name);
 }
 
 // Binary disassembler run method
@@ -190,22 +180,135 @@ void bin_asm_disassembler::run() {
     process_binary();
 }
 
+// Helper function to read page header fields from a text section
+// Returns in_order_page_len (0 if this is the last page in the current label scope)
+static uint16_t get_in_order_page_len(const ELFIO::section* section) {
+    if (section->get_size() < elf_section_header_padding) {
+        return 0;  // Section too small to have a page header
+    }
+    const char* data = section->get_data();
+    // Verify magic bytes
+    if (static_cast<uint8_t>(data[page_header_magic_byte_0]) != page_header_magic ||
+        static_cast<uint8_t>(data[page_header_magic_byte_1]) != page_header_magic) {
+        return 0;  // Not a valid page header
+    }
+    // Read in_order_page_len (bytes 10-11, little-endian)
+    return static_cast<uint8_t>(data[page_header_in_order_len_low]) |
+           (static_cast<uint8_t>(data[page_header_in_order_len_high]) << byte_shift);
+}
+
 void elf_asm_disassembler::process_sections() {
-    auto state = std::make_shared<disassembler_state>();
+    auto state = create_disassembler_state();
+
+    // Count unique columns to determine partition size
+    std::set<int> columns;
+    int first_column = 0;
     for (const auto& section_ptr : m_elf_reader.sections) {
         const ELFIO::section* section = section_ptr.get();
         const std::string section_name = section->get_name();
         if (section->get_type() != ELFIO::SHT_PROGBITS)
             continue;
+        if (is_text_section(section_name)) {
+            // Parse column from section name like ".ctrltext.0.1" -> column 0
+            size_t first_dot = section_name.find('.', 1);
+            if (first_dot != std::string::npos) {
+                size_t second_dot = section_name.find('.', first_dot + 1);
+                if (second_dot != std::string::npos) {
+                    std::string col_str = section_name.substr(first_dot + 1, second_dot - first_dot - 1);
+                    try {
+                        int col = std::stoi(col_str);
+                        if (columns.empty()) first_column = col;
+                        columns.insert(col);
+                    } catch (...) { /* ignore parse errors */ }
+                }
+            }
+        }
+    }
+
+    // Emit partition directive (number of columns)
+    if (!columns.empty()) {
+        m_asm_writer.write_partition(std::to_string(columns.size()) + "column");
+    }
+
+    // Emit initial attach_to_group
+    m_asm_writer.write_attach_to_group(first_column);
+
+    int current_column = first_column;
+    int page_counter = 0;  // Track page number for unique labels
+    std::string current_page_label;  // Track current page label for .endl
+    uint16_t prev_in_order_page_len = 0;  // Track previous page's in_order_page_len
+
+    for (const auto& section_ptr : m_elf_reader.sections) {
+        const ELFIO::section* section = section_ptr.get();
+        const std::string section_name = section->get_name();
+        if (section->get_type() != ELFIO::SHT_PROGBITS)
+            continue;
+
+        // Check for column change in text sections
+        if (is_text_section(section_name)) {
+            size_t first_dot = section_name.find('.', 1);
+            if (first_dot != std::string::npos) {
+                size_t second_dot = section_name.find('.', first_dot + 1);
+                if (second_dot != std::string::npos) {
+                    std::string col_str = section_name.substr(first_dot + 1, second_dot - first_dot - 1);
+                    try {
+                        int section_col = std::stoi(col_str);
+                        if (section_col != current_column) {
+                            m_asm_writer.write_attach_to_group(section_col);
+                            current_column = section_col;
+                        }
+                    } catch (...) { /* ignore parse errors */ }
+                }
+            }
+        }
+
         print_section_info(section);
         if (is_text_section(section_name)) {
             add_text_sec_comment();
+
+            // Read the current section's in_order_page_len for later use
+            uint16_t current_in_order_len = get_in_order_page_len(section);
+
+            // Determine if we need to emit a new label for this page
+            // A new label is needed if:
+            // 1. This is the first page (page_counter == 0): no label needed (uses default)
+            // 2. Previous page had in_order_page_len > 0: this page continues the same scope, no new label
+            // 3. Previous page had in_order_page_len == 0: previous scope ended, need new label
+            if (page_counter > 0 && prev_in_order_page_len == 0) {
+                if (state->has_pending_ooo_labels()) {
+                    // OOO labels (from load_pdi, etc.) establish new page scope
+                    // Get and consume the OOO label, strip '@' prefix for .endl usage
+                    std::string ooo_label = state->get_next_ooo_label();
+                    if (!ooo_label.empty() && ooo_label.front() == '@')
+                        current_page_label = ooo_label.substr(1);
+                    else
+                        current_page_label = ooo_label;
+                    // Write the label (with @ prefix for ASM format)
+                    m_asm_writer.write_label(ooo_label);
+                } else {
+                    // Create a unique page label with padded number for correct sorting
+                    // Use format "zpage_NNNN" to sort AFTER "label0" (OOO target labels)
+                    std::ostringstream oss;
+                    oss << "zpage_" << std::setw(4) << std::setfill('0') << page_counter;
+                    current_page_label = oss.str();
+                    m_asm_writer.write_label(current_page_label);
+                }
+            }
+
             process_text_section(section, state);
+            prev_in_order_page_len = current_in_order_len;  // Update for next iteration
+            page_counter++;
         }
         if (is_data_section(section_name)) {
             add_data_sec_comment();
             process_data_section(section, state);
             state->reset();
+            // Emit .endl to close the current page label scope when this scope ends
+            // The scope ends when in_order_page_len was 0 (no continuation to next page)
+            if (!current_page_label.empty() && prev_in_order_page_len == 0) {
+                m_asm_writer.write_directive(".endl " + current_page_label);
+                current_page_label.clear();
+            }
         }
     }
 }
@@ -226,6 +329,9 @@ void elf_asm_disassembler::print_section_info(const ELFIO::section* section) {
 void elf_asm_disassembler::process_text_section(const ELFIO::section* section, std::shared_ptr<disassembler_state> state) {
     const char* section_data = section->get_data();
     size_t section_size = section->get_size();
+
+    // NOTE: OOO labels are now handled in process_sections() based on in_order_page_len
+    // to correctly determine scope boundaries.
     // Use common base class method for text processing
     process_text_block(section_data, elf_section_header_padding, section_size, state);
 }
@@ -282,7 +388,7 @@ void bin_asm_disassembler::process_binary() {
                              (cur_page_len - page_header_size) : 0;
         
         // Process this page
-        auto state = std::make_shared<disassembler_state>();
+        auto state = create_disassembler_state();
         
         if (content_size > 0) {
             process_binary_data(m_binary_data.data() + offset + page_header_size, 

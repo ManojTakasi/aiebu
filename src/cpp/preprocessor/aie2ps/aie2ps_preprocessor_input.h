@@ -91,6 +91,8 @@ public:
     return m_ctrlpkt_id_map;
   }
 
+  // Returns the expected target architecture for verification against .target directive
+  virtual std::string get_expected_target() const = 0;
 };
 
 class aie2ps_preprocessor_input : public asm_preprocessor_input
@@ -98,6 +100,7 @@ class aie2ps_preprocessor_input : public asm_preprocessor_input
 public:
   aie2ps_preprocessor_input() { control_packet_patching = symbol::patch_schema::control_packet_57;}
 
+  std::string get_expected_target() const override { return "aie2ps"; }
 };
 
 class asm_config_preprocessor_input : public preprocessor_input

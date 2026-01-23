@@ -37,9 +37,10 @@ public:
   std::map<std::string, uint32_t>& labelpageindex, std::map<uint32_t, std::string>& ctrlpkt_id_map, uint32_t optimization_level);
 
   virtual void patch57(const std::shared_ptr<section_writer> textwriter, std::shared_ptr<section_writer> datawriter, offset_type offset, uint64_t patch);
+  virtual void patch_cp_57(const std::shared_ptr<section_writer> ctrlpktwriter, offset_type offset, uint64_t patch);
   void fill_scratchpad(std::shared_ptr<section_writer> padwriter,const std::map<std::string, std::shared_ptr<scratchpad_info>>& scratchpads);
   void fill_controlpkt(std::shared_ptr<section_writer> padwriter, const std::vector<char>& ctrlpkt);
-  void fill_control_packet_symbols(std::shared_ptr<section_writer> ctrlpktwriter, const std::vector<symbol>& syms);
+  void fill_control_packet_symbols(std::shared_ptr<section_writer> ctrlpktwriter, std::vector<symbol>& syms);
 
   std::string findKey(const std::map<std::string, std::vector<std::string>>& myMap, const std::string& value);
 
@@ -60,6 +61,31 @@ public:
     if(dest->get_numcolumn() != source->get_numcolumn())
       throw error(error::error_code::invalid_asm, "Partition column " + std::to_string(dest->get_numcolumn()) + " != " + std::to_string(source->get_numcolumn()) + "\n");
   }
+
+  virtual void check_target_info(std::shared_ptr<const target_info> source, std::shared_ptr<const target_info> dest)
+  {
+    if (!source || !dest)
+      return;  // Skip check if either is null
+    if (!source->is_set() || !dest->is_set())
+      return;  // Skip check if either is not set
+    if (source->get_arch() != dest->get_arch())
+      throw error(error::error_code::invalid_asm, "Target architecture mismatch: '" + source->get_full_target() + "' != '" + dest->get_full_target() + "'\n");
+    if (source->get_sub_arch() != dest->get_sub_arch())
+      throw error(error::error_code::invalid_asm, "Target sub-architecture mismatch: '" + source->get_full_target() + "' != '" + dest->get_full_target() + "'\n");
+  }
+
+  virtual void check_aie_row_topology_info(std::shared_ptr<const aie_row_topology_info> source, std::shared_ptr<const aie_row_topology_info> dest)
+  {
+    if (!source || !dest)
+      return;  // Skip check if either is null
+    if (!source->is_set() || !dest->is_set())
+      return;  // Skip check if either is not set
+    if (source->get_num_south_shim() != dest->get_num_south_shim() ||
+        source->get_num_memtile_row() != dest->get_num_memtile_row() ||
+        source->get_num_coretile_row() != dest->get_num_coretile_row() ||
+        source->get_num_north_shim() != dest->get_num_north_shim())
+      throw error(error::error_code::invalid_asm, "AIE row topology mismatch: '" + source->get_topology_string() + "' != '" + dest->get_topology_string() + "'\n");
+  }
 };
 
 //asm_config_preprocessor<aie2ps_config_encoder, aie2ps_preprocessed_output>
@@ -72,8 +98,11 @@ public:
   process(std::shared_ptr<preprocessed_output> input) override
   {
     auto tinput = std::static_pointer_cast<asm_config_preprocessed_output<input_tamplete>>(input);
-    // lets get partition info for first instance and compare this with other instances
-    auto pinfo_first_instance = tinput->get_kernel_map().begin()->second.begin()->second->get_partition_info();
+    // lets get partition, target, and row topology info for first instance and compare this with other instances
+    auto first_instance = tinput->get_kernel_map().begin()->second.begin()->second;
+    auto pinfo_first_instance = first_instance->get_partition_info();
+    auto tinfo_first_instance = first_instance->get_target_info();
+    auto rinfo_first_instance = first_instance->get_aie_row_topology_info();
     auto output_writer = std::make_shared<config_writer>(pinfo_first_instance);
     twriter.push_back(output_writer);
 
@@ -82,6 +111,8 @@ public:
       {
         T encoder_object;
         encoder_object.check_partition_info(instance->get_partition_info(), output_writer->get_partition_info());
+        encoder_object.check_target_info(instance->get_target_info(), tinfo_first_instance);
+        encoder_object.check_aie_row_topology_info(instance->get_aie_row_topology_info(), rinfo_first_instance);
         output_writer->add_kernel_map(kernel, iname, encoder_object.process(instance));
       }
     }

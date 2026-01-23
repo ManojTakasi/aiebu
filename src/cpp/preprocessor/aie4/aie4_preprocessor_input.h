@@ -15,6 +15,7 @@ public:
     m_control_packet_offset_correction = 4;
   }
 
+  std::string get_expected_target() const override { return "aie4"; }
 };
 
 }

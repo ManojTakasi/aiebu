@@ -28,13 +28,20 @@ class aie2ps_preprocessed_output : public preprocessed_output
   asm_dump_flag isdebug = asm_dump_flag::text;
   uint32_t m_optimization_level = 0;
   std::shared_ptr<const partition_info> m_partition;
+  std::shared_ptr<const target_info> m_target;
+  std::shared_ptr<const aie_row_topology_info> m_aie_row_topology;
   std::map<std::string, std::vector<char>> m_ctrlpkt;
   std::map<uint32_t, std::string> m_ctrlpkt_id_map;
 public:
 
-  explicit aie2ps_preprocessed_output(std::shared_ptr<const partition_info> partition): m_partition(std::move(partition)) {}
+  explicit aie2ps_preprocessed_output(std::shared_ptr<const partition_info> partition,
+                                      std::shared_ptr<const target_info> target = nullptr,
+                                      std::shared_ptr<const aie_row_topology_info> aie_row_topology = nullptr)
+    : m_partition(std::move(partition)), m_target(std::move(target)), m_aie_row_topology(std::move(aie_row_topology)) {}
 
   std::shared_ptr<const partition_info> get_partition_info() const { return m_partition; }
+  std::shared_ptr<const target_info> get_target_info() const { return m_target; }
+  std::shared_ptr<const aie_row_topology_info> get_aie_row_topology_info() const { return m_aie_row_topology; }
 
   void set_coldata(const uint32_t col, const std::vector<page> &pages, std::map<std::string, std::shared_ptr<scratchpad_info>> &scratchpad, std::map<std::string, uint32_t>& labelpageindex, uint32_t control_packet_index)
   {

@@ -63,28 +63,91 @@ enum class asm_dump_flag {
 constexpr uint32_t DEFAULT_COLUMN = 4;
 
 class partition_info {
-  union {
-    struct {
+  union partition_union {
+    struct core_mem_info {
       uint32_t core;
       uint32_t mem;
-    };
+    } core_mem;
     uint32_t column;
-  };
+  } partition_union;
   public:
   partition_info() : partition_info(0, 0) {}
-  partition_info(uint32_t core, uint32_t mem): core(core), mem(mem) { }
+  partition_info(uint32_t core, uint32_t mem): partition_union{{core, mem}} { }
 
-  uint32_t get_numcore() const { return core; }
+  uint32_t get_numcore() const { return partition_union.core_mem.core; }
 
-  uint32_t get_numcolumn() const { return column; }
+  uint32_t get_numcolumn() const { return partition_union.column; }
 
-  uint32_t get_nummem() const { return mem; }
+  uint32_t get_nummem() const { return partition_union.core_mem.mem; }
 
-  void set_numcolumn(uint32_t val) { column = val; }
+  void set_numcolumn(uint32_t val) { partition_union.column = val; }
 
-  void set_numcore(uint32_t val) { core = val; }
+  void set_numcore(uint32_t val) { partition_union.core_mem.core = val; }
 
-  void set_nummem(uint32_t val) { mem = val; }
+  void set_nummem(uint32_t val) { partition_union.core_mem.mem = val; }
+};
+
+// target_info: stores target architecture information from .target directive
+// Format: .target <arch>-<sub-arch>
+class target_info {
+  std::string m_arch;
+  std::string m_sub_arch;
+public:
+  target_info() : m_arch(""), m_sub_arch("") {}
+  target_info(const std::string& arch, const std::string& sub_arch = "")
+    : m_arch(arch), m_sub_arch(sub_arch) {}
+
+  std::string get_arch() const { return m_arch; }
+  std::string get_sub_arch() const { return m_sub_arch; }
+  bool has_sub_arch() const { return !m_sub_arch.empty(); }
+  bool is_set() const { return !m_arch.empty(); }
+
+  void set_arch(const std::string& arch) { m_arch = arch; }
+  void set_sub_arch(const std::string& sub_arch) { m_sub_arch = sub_arch; }
+
+  // Returns full target string: "arch" or "arch-sub_arch"
+  std::string get_full_target() const {
+    if (m_sub_arch.empty())
+      return m_arch;
+    return m_arch + "-" + m_sub_arch;
+  }
+};
+
+// aie_row_topology_info: stores row topology information from .aie_row_topology directive
+// Format: .aie_row_topology A-B-C-D
+// Where: A=num_south_shim, B=num_memtile_row, C=num_coretile_row, D=num_north_shim
+// Example: .aie_row_topology 1-1-4-0
+class aie_row_topology_info {
+  uint32_t m_num_south_shim;    // Number of south shim rows in a column
+  uint32_t m_num_memtile_row;   // Number of memtile rows in a column
+  uint32_t m_num_coretile_row;  // Number of coretile rows in a column
+  uint32_t m_num_north_shim;    // Number of north shim rows in a column
+  bool m_is_set;
+public:
+  aie_row_topology_info()
+    : m_num_south_shim(0), m_num_memtile_row(0), m_num_coretile_row(0), m_num_north_shim(0), m_is_set(false) {}
+  aie_row_topology_info(uint32_t south_shim, uint32_t memtile, uint32_t coretile, uint32_t north_shim)
+    : m_num_south_shim(south_shim), m_num_memtile_row(memtile), m_num_coretile_row(coretile), m_num_north_shim(north_shim), m_is_set(true) {}
+
+  uint32_t get_num_south_shim() const { return m_num_south_shim; }
+  uint32_t get_num_memtile_row() const { return m_num_memtile_row; }
+  uint32_t get_num_coretile_row() const { return m_num_coretile_row; }
+  uint32_t get_num_north_shim() const { return m_num_north_shim; }
+  bool is_set() const { return m_is_set; }
+
+  void set_num_south_shim(uint32_t val) { m_num_south_shim = val; }
+  void set_num_memtile_row(uint32_t val) { m_num_memtile_row = val; }
+  void set_num_coretile_row(uint32_t val) { m_num_coretile_row = val; }
+  void set_num_north_shim(uint32_t val) { m_num_north_shim = val; }
+  void set_is_set(bool val) { m_is_set = val; }
+
+  // Returns topology string: "A-B-C-D"
+  std::string get_topology_string() const {
+    return std::to_string(m_num_south_shim) + "-" +
+           std::to_string(m_num_memtile_row) + "-" +
+           std::to_string(m_num_coretile_row) + "-" +
+           std::to_string(m_num_north_shim);
+  }
 };
 
 inline uint8_t low_8(uint32_t num) { return (num >> FIRST_BYTE_SHIFT ) & BYTE_MASK; }

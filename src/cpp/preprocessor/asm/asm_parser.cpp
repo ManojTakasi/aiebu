@@ -105,6 +105,8 @@ parse_lines()
   directive_list[".setpad"] = std::make_shared<pad_directive>();
   directive_list[".section"] = std::make_shared<section_directive>();
   directive_list[".partition"] = std::make_shared<partition_directive>();
+  directive_list[".target"] = std::make_shared<target_directive>();
+  directive_list[".aie_row_topology"] = std::make_shared<aie_row_topology_directive>();
   std::string file = "default";
   parse_lines(m_data, file);
 }
@@ -244,6 +246,62 @@ operate(std::shared_ptr<asm_parser> parserptr, const smatch& sm)
     }
   } else
     throw error(error::error_code::invalid_asm, "Invalid format!! " + line + "\n");
+}
+
+void
+target_directive::
+operate(std::shared_ptr<asm_parser> parserptr, const smatch& sm)
+{
+  m_parserptr = parserptr;
+  // Pattern: .target <arch>-<sub-arch> or .target <arch>
+  static const regex pattern(R"(\.target\s+([a-zA-Z0-9]+)(?:-([a-zA-Z0-9]+))?)");
+  smatch match;
+  log_info() << "TARGET:" << sm[0].str() << std::endl;
+  std::string line = sm[0].str();
+  if (regex_match(line, match, pattern)) {
+    std::string arch = match[1].str();
+    log_info() << "Target architecture: " << arch << std::endl;
+    m_parserptr->set_target_arch(arch);
+
+    if (match[2].matched && match[2].length() > 0) {
+      std::string sub_arch = match[2].str();
+      log_info() << "Target sub-architecture: " << sub_arch << std::endl;
+      m_parserptr->set_target_sub_arch(sub_arch);
+    }
+  } else
+    throw error(error::error_code::invalid_asm, "Invalid .target format!! " + line + "\n");
+}
+
+void
+aie_row_topology_directive::
+operate(std::shared_ptr<asm_parser> parserptr, const smatch& sm)
+{
+  m_parserptr = parserptr;
+  // Pattern: .aie_row_topology A-B-C-D
+  // Where: A=num_south_shim, B=num_memtile_row, C=num_coretile_row, D=num_north_shim
+  // Example: .aie_row_topology 1-1-4-0
+  static const regex pattern(R"(\.aie_row_topology\s+(\d+)-(\d+)-(\d+)-(\d+))");
+  smatch match;
+  log_info() << "AIE_ROW_TOPOLOGY:" << sm[0].str() << std::endl;
+  std::string line = sm[0].str();
+  if (regex_match(line, match, pattern)) {
+    uint32_t num_south_shim = to_uinteger<uint32_t>(match[1]);
+    uint32_t num_memtile_row = to_uinteger<uint32_t>(match[2]);
+    uint32_t num_coretile_row = to_uinteger<uint32_t>(match[3]);
+    uint32_t num_north_shim = to_uinteger<uint32_t>(match[4]);
+
+    log_info() << "Number of south shim: " << num_south_shim << std::endl;
+    log_info() << "Number of memtile rows: " << num_memtile_row << std::endl;
+    log_info() << "Number of coretile rows: " << num_coretile_row << std::endl;
+    log_info() << "Number of north shim: " << num_north_shim << std::endl;
+
+    m_parserptr->set_num_south_shim(num_south_shim);
+    m_parserptr->set_num_memtile_row(num_memtile_row);
+    m_parserptr->set_num_coretile_row(num_coretile_row);
+    m_parserptr->set_num_north_shim(num_north_shim);
+    m_parserptr->set_aie_row_topology_is_set(true);
+  } else
+    throw error(error::error_code::invalid_asm, "Invalid .aie_row_topology format!! " + line + "\nExpected format: .aie_row_topology A-B-C-D\n");
 }
 
 bool

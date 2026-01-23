@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Copyright (C) 2024-2025, Advanced Micro Devices, Inc. All rights reserved.
+// Copyright (C) 2024-2026, Advanced Micro Devices, Inc. All rights reserved.
 #include "reporter.h"
 #include "packets.h"
 #include "transaction.hpp"
@@ -28,7 +28,6 @@ namespace aiebu {
         }
         else if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie2_config ||
             m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie2ps_config ||
-            m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie4 ||
             m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie4_config) {
                throw error(error::error_code::internal_error, "Not supported");
         }
@@ -127,12 +126,15 @@ namespace aiebu {
                 stream << tprint.get_all_ops() << std::endl;
             }
         }
-        else if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::blob_instr_transaction) {
+        else if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::blob_instr_transaction ||
+                 m_buffer_type == aiebu::aiebu_assembler::buffer_type::blob_aie2ps ||
+                 m_buffer_type == aiebu::aiebu_assembler::buffer_type::blob_aie4) {
             disassemble_blob(root);
         }
-        else if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie2ps ) {
+        else if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie2ps ||
+                 m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie4) {
             try {
-                aiebu::elf_asm_disassembler disasm(root.string(), std::cout);
+                aiebu::elf_asm_disassembler disasm(root.string(), std::cout, m_buffer_type);
                 disasm.run();
             } catch (const std::exception& ex) {
                 throw error(error::error_code::internal_error,
@@ -185,6 +187,27 @@ namespace aiebu {
             // Disassemble binary files - delegate to disassemble_blob for evaluation
             disassemble_blob(stream);
         }
+        else if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie2ps ||
+                 m_buffer_type == aiebu::aiebu_assembler::buffer_type::elf_aie4) {
+            // Write buffer to temp file and use elf_asm_disassembler
+            try {
+                std::filesystem::path temp_file = std::filesystem::temp_directory_path() / "aiebu_temp.elf";
+                std::ofstream ofs(temp_file, std::ios::binary);
+                if (!ofs) {
+                    throw error(error::error_code::internal_error, "Failed to create temp file");
+                }
+                ofs.write(m_buffer.data(), static_cast<std::streamsize>(m_buffer.size()));
+                ofs.close();
+
+                aiebu::elf_asm_disassembler disasm(temp_file.string(), stream, m_buffer_type);
+                disasm.run();
+
+                std::filesystem::remove(temp_file);
+            } catch (const std::exception& ex) {
+                throw error(error::error_code::internal_error,
+                    "ELF disassembler error: " + std::string(ex.what()));
+            }
+        }
         else {
             throw error(error::error_code::invalid_buffer_type,
                   "Invalid buffer type for disassembly");
@@ -200,14 +223,12 @@ namespace aiebu {
     void reporter::disassemble_blob(std::ostream &stream) const
     {
         try {
-            // Evaluate buffer type and disassemble accordingly
             if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::blob_aie2ps ||
                 m_buffer_type == aiebu::aiebu_assembler::buffer_type::blob_aie4) {
                 aiebu::bin_asm_disassembler disasm(m_buffer, stream, m_buffer_type);
                 disasm.run();
             }
             else if (m_buffer_type == aiebu::aiebu_assembler::buffer_type::blob_instr_transaction) {
-                // Legacy transaction format disassembly
                 transaction tprint(m_buffer.data(), m_buffer.size());
                 stream << tprint.get_all_ops() << std::endl;
             }
