@@ -105,7 +105,6 @@ parse_lines()
   directive_list[".setpad"] = std::make_shared<pad_directive>();
   directive_list[".section"] = std::make_shared<section_directive>();
   directive_list[".partition"] = std::make_shared<partition_directive>();
-  directive_list[".target"] = std::make_shared<target_directive>();
   std::string file = "default";
   parse_lines(m_data, file);
 }
@@ -356,26 +355,4 @@ read_pad_file(std::string& name, std::string& filename)
   return true;
 }
 
-void
-target_directive::
-operate(std::shared_ptr<asm_parser> parserptr, const smatch& sm)
-{
-  m_parserptr = parserptr;
-  verify_match(sm, error::error_code::invalid_asm, ".target directive requires an argument\n");
-
-  // Parse target: format is <arch> or <arch>-<sub-arch> or <arch><sub-arch>
-  // Examples: aie2ps, aie4, aie4-a, aie4a, aie4-z, aie4z
-  std::string target = trim(sm[2].str());
-
-  // Validate target format - accepts both "aie4-a" and "aie4a" styles
-  static const regex target_regex(R"((aie2ps|aie4)(-?[abz])?)");
-  smatch target_match;
-  if (!regex_match(target, target_match, target_regex))
-    throw error(error::error_code::invalid_asm,
-                "Invalid .target value: " + target +
-                ". Expected format: aie2ps, aie4, aie4-a/aie4a, aie4-b/aie4b, or aie4-z/aie4z\n");
-
-  log_info() << "TARGET:" << target;
-  m_parserptr->set_target(target);
-}
 }

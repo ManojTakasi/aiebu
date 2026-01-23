@@ -216,15 +216,18 @@ process(const std::vector<char>& buffer1,
   m_ppi->set_args(buffer1, patch_json, buffer2, libs, libpaths, ctrlpkt, artifacts);
   auto ppo = m_preprocessor->process(m_ppi);
 
-  // Check for .target directive and configure ELF accordingly
-  auto aie2ps_output = std::dynamic_pointer_cast<aie2ps_preprocessed_output>(ppo);
-  if (aie2ps_output && aie2ps_output->has_target()) {
-    // .target is present in ASM:
-    // 1. Validate that target belongs to correct family for the -t option
-    // 2. Configure ELF with new version (0x04/0x05) and specific OSABI
-    validate_target_family(aie2ps_output->get_target());
-    configure_elf_for_target(aie2ps_output->get_target());
-  }
+  // TODO: Integrate with upstream .target parsing
+  // Once upstream provides has_target() and get_target() methods on the preprocessed output,
+  // uncomment the following to enable OSABI/version configuration:
+  //
+  // auto aie2ps_output = std::dynamic_pointer_cast<aie2ps_preprocessed_output>(ppo);
+  // if (aie2ps_output && aie2ps_output->has_target()) {
+  //   // .target is present in ASM:
+  //   // 1. Validate that target belongs to correct family for the -t option
+  //   // 2. Configure ELF with new version (0x04/0x05) and specific OSABI
+  //   validate_target_family(aie2ps_output->get_target());
+  //   configure_elf_for_target(aie2ps_output->get_target());
+  // }
   // If no .target directive: ELF writer keeps legacy defaults
   // (version 0x02/0x03, OSABI = aie2ps_group = 0x46)
 

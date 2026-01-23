@@ -93,9 +93,6 @@ public:
     toutput->set_ctrlpkt(controlpkts);
     toutput->set_ctrlpkt_id_map(ctrlpkt_id_map);
     toutput->set_annotations(parser->get_annotations());
-    // Pass .target directive value if present
-    if (parser->has_target())
-      toutput->set_target(parser->get_target());
 
     for (auto col: collist)
     {
