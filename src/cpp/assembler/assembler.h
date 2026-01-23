@@ -27,13 +27,9 @@ public:
     aie2ps_asm,
     aie2_asm,
     aie2_config,
-    aie4_asm,
+    aie4_asm,       // Covers all aie4 family (aie4, aie4a, aie4z) - specific target from .target directive
     aie2ps_config,
-    aie4_config,
-    aie4a_asm,
-    aie4a_config,
-    aiez_asm,
-    aiez_config
+    aie4_config     // Covers all aie4 family config - specific target from .target directive
   };
 
 private:
@@ -43,10 +39,12 @@ private:
   std::shared_ptr<preprocessor_input> m_ppi;
   elf_type m_elf_type;
 
-  // Map .target directive value to expected elf_type
-  static std::string elf_type_to_target(elf_type type);
-  // Validate parsed .target against expected elf_type
-  void validate_target(const std::string& parsed_target) const;
+  // Check if target from .target directive belongs to expected family for elf_type
+  // Returns true if valid, throws error if mismatch
+  void validate_target_family(const std::string& parsed_target) const;
+
+  // Configure ELF writer based on .target directive (sets OSABI and version)
+  void configure_elf_for_target(const std::string& parsed_target);
 
 public:
   explicit assembler(const elf_type type);

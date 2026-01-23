@@ -131,6 +131,12 @@ public:
 
   }
 
+  // Methods to update OS ABI and version after construction (for .target directive support)
+  void set_os_abi(unsigned char abi) { m_elfio.set_os_abi(abi); }
+  void set_abi_version(unsigned char version) { m_elfio.set_abi_version(version); }
+  unsigned char get_os_abi() const { return m_elfio.get_os_abi(); }
+  unsigned char get_abi_version() const { return m_elfio.get_abi_version(); }
+
   virtual std::vector<char> process(std::vector<std::shared_ptr<writer>>& mwriter);
 
   virtual ~elf_writer() = default;

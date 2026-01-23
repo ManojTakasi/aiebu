@@ -31,7 +31,7 @@ constexpr unsigned int os_abi_aie2ps = 64;        // 0x40
 constexpr unsigned int os_abi_aie2ps_group = 70;  // 0x46
 constexpr unsigned int os_abi_aie4 = 75;          // 0x4B
 constexpr unsigned int os_abi_aie4a = 86;         // 0x56
-constexpr unsigned int os_abi_aiez = 105;         // 0x69
+constexpr unsigned int os_abi_aie4z = 105;        // 0x69
 // ELF header is at least 52 bytes for 32-bit, 64 bytes for 64-bit
 constexpr unsigned int min_elf_header_size = 52;
 // EI_OSABI is at offset 7 in the ELF header
@@ -74,8 +74,8 @@ identify_elf_type(const std::vector<char>& buffer)
       return aiebu_assembler::buffer_type::elf_aie4;
     else if (os_abi == os_abi_aie4a)
       return aiebu_assembler::buffer_type::elf_aie4a;
-    else if (os_abi == os_abi_aiez)
-      return aiebu_assembler::buffer_type::elf_aiez;
+    else if (os_abi == os_abi_aie4z)
+      return aiebu_assembler::buffer_type::elf_aie4z;
     else
       return aiebu_assembler::buffer_type::unspecified;
   }

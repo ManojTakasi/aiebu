@@ -50,7 +50,7 @@ class transform_manager {
   static constexpr uint8_t elf_amd_aie2ps_group = 70;      // 0x46 AIE2PS/AIE4 group ELF format
   static constexpr uint8_t elf_amd_aie4         = 75;      // 0x4B AIE4 ELF format
   static constexpr uint8_t elf_amd_aie4a        = 86;      // 0x56 AIE4A ELF format
-  static constexpr uint8_t elf_amd_aiez         = 105;     // 0x69 AIEZ ELF format
+  static constexpr uint8_t elf_amd_aie4z        = 105;     // 0x69 aie4z ELF format
 
   // Register offset multiplier (2 for 32-bit registers = 64-bit offset)
   static constexpr uint8_t num_32bit_register = 2;
@@ -238,6 +238,11 @@ public:
   /**
    * @brief Load and validate ELF data
    * @param elf_data Vector containing ELF binary data
+   *
+   * Supported ELF versions:
+   * - Version 0x02/0x03 (legacy): Only OS ABI 0x46 (aie2ps_group)
+   * - Version 0x04/0x05 (new): OS ABI 0x40/0x46/0x4B/0x56/0x69 (aie2ps, aie2ps_group, aie4, aie4a, aie4z)
+   *
    * @throws error if ELF data is invalid or not AIE2PS/AIE4 format
    */
   void load_elf(const std::vector<char>& elf_data);
@@ -294,7 +299,10 @@ public:
    * For C++ mangled names, matches the exact identifier (e.g., "DPU" matches "_Z3DPUPcPc"
    * but not "_Z4DPU1PcPc"). Automatically updates length prefixes (_Z3DPU -> _Z4XCVB).
    * For non-mangled names, does exact string matching.
-   * Only supports OS ABI 0x46 and ABI version 0x3.
+   *
+   * Supported ELF versions:
+   * - Version 0x02/0x03 (legacy): Only OS ABI 0x46 (aie2ps_group)
+   * - Version 0x04/0x05 (new): OS ABI 0x40/0x46/0x4B/0x56/0x69 (aie2ps, aie2ps_group, aie4, aie4a, aie4z)
    *
    * @throws error if format unsupported, sections missing, or name not found
    */

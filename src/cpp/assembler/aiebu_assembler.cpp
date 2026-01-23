@@ -69,8 +69,11 @@ aiebu_assembler(buffer_type type,
     elf_data = a.process(buffer1, libs, libpaths, patch_json, buffer2, {}, &artifacts);
     m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aie2_config;
   }
-  else if (type == buffer_type::asm_aie4)
+  else if (type == buffer_type::asm_aie4 ||
+           type == buffer_type::asm_aie4a ||
+           type == buffer_type::asm_aie4z)
   {
+    // All aie4 family uses same elf_type - specific OSABI determined from .target directive
     aiebu::assembler a(assembler::elf_type::aie4_asm);
     elf_data = a.process(buffer1, libs, libpaths, patch_json, {}, {}, &artifacts);
     m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aie4;
@@ -81,35 +84,14 @@ aiebu_assembler(buffer_type type,
     elf_data = a.process(buffer1, libs, libpaths, patch_json, buffer2, {}, &artifacts);
     m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aie2ps_config;
   }
-  else if (type == buffer_type::aie4_config)
+  else if (type == buffer_type::aie4_config ||
+           type == buffer_type::aie4a_config ||
+           type == buffer_type::aie4z_config)
   {
+    // All aie4 family config uses same elf_type - specific OSABI determined from .target directive
     aiebu::assembler a(assembler::elf_type::aie4_config);
     elf_data = a.process(buffer1, libs, libpaths, patch_json, buffer2, {}, &artifacts);
     m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aie4_config;
-  }
-  else if (type == buffer_type::asm_aie4a)
-  {
-    aiebu::assembler a(assembler::elf_type::aie4a_asm);
-    elf_data = a.process(buffer1, libs, libpaths, patch_json, {}, {}, &artifacts);
-    m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aie4a;
-  }
-  else if (type == buffer_type::aie4a_config)
-  {
-    aiebu::assembler a(assembler::elf_type::aie4a_config);
-    elf_data = a.process(buffer1, libs, libpaths, patch_json, buffer2, {}, &artifacts);
-    m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aie4a_config;
-  }
-  else if (type == buffer_type::asm_aiez)
-  {
-    aiebu::assembler a(assembler::elf_type::aiez_asm);
-    elf_data = a.process(buffer1, libs, libpaths, patch_json, {}, {}, &artifacts);
-    m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aiez;
-  }
-  else if (type == buffer_type::aiez_config)
-  {
-    aiebu::assembler a(assembler::elf_type::aiez_config);
-    elf_data = a.process(buffer1, libs, libpaths, patch_json, buffer2, {}, &artifacts);
-    m_output_type = aiebu::aiebu_assembler::buffer_type::elf_aiez_config;
   }
   else {
     throw error(error::error_code::invalid_buffer_type, "Buffer_type not supported !!!");

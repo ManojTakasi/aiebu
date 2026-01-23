@@ -29,7 +29,7 @@ void main_helper(int argc, char** argv,
       .allow_unrecognised_options()
       .add_options()
       ("h,help", "show help message and exit", cxxopts::value<bool>()->default_value("false"))
-      ("t,target", "supported targets aie2ps/aie2asm/aie2txn/aie2dpu/aie2_config/aie4/aie4a/aie4z/aie2ps_config/aie4_config/aie4a_config/aie4z_config", cxxopts::value<decltype(target_name)>())
+      ("t,target", "supported targets aie2ps/aie2asm/aie2txn/aie2dpu/aie2_config/aie4/aie2ps_config/aie4_config (specific aie4 variant determined from .target directive in ASM)", cxxopts::value<decltype(target_name)>())
       ("v,version", "show version and exit", cxxopts::value<bool>()->default_value("false"))
       ;
 
@@ -91,12 +91,8 @@ int main( int argc, char** argv )
     targets.emplace_back(std::make_shared<aiebu::utilities::target_aie2blob_dpu>(executable));
     targets.emplace_back(std::make_shared<aiebu::utilities::target_aie2_config>(executable));
     targets.emplace_back(std::make_shared<aiebu::utilities::target_aie4>(executable));
-    targets.emplace_back(std::make_shared<aiebu::utilities::target_aie4a>(executable));
-    targets.emplace_back(std::make_shared<aiebu::utilities::target_aie4z>(executable));
     targets.emplace_back(std::make_shared<aiebu::utilities::target_aie2ps_config>(executable));
     targets.emplace_back(std::make_shared<aiebu::utilities::target_aie4_config>(executable));
-    targets.emplace_back(std::make_shared<aiebu::utilities::target_aie4a_config>(executable));
-    targets.emplace_back(std::make_shared<aiebu::utilities::target_aie4z_config>(executable));
   }
 
   // -- Program Description

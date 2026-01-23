@@ -62,13 +62,28 @@ load_elf(const std::vector<char>& elf_data)
   if (!m_elfio.load(istr))
     throw error(error::error_code::invalid_input, "Failed to load ELF from buffer\n");
 
-  // Only AIE2PS/AIE4 legacy ELF and group ELF formats are supported
+  // Check ELF version and OS ABI compatibility
   auto os_abi = m_elfio.get_os_abi();
-  if (os_abi != elf_amd_aie2ps_group &&
-      os_abi != elf_amd_aie4 &&
-      os_abi != elf_amd_aie4a &&
-      os_abi != elf_amd_aiez)
-    throw error(error::error_code::invalid_input, "Only aie2ps/aie4 config elf supported\n");
+  auto abi_version = m_elfio.get_abi_version();
+
+  // Legacy ELF (version 0x02/0x03): only aie2ps_group is supported
+  // New ELF (version 0x04/0x05): aie2ps_group, aie2ps, aie4, aie4a, aie4z are supported
+  if (abi_version == 0x02 || abi_version == 0x03) {
+    // Legacy ELF - only aie2ps_group
+    if (os_abi != elf_amd_aie2ps_group)
+      throw error(error::error_code::invalid_input, "Only aie2ps_group elf supported for legacy ELF version\n");
+  } else if (abi_version == 0x04 || abi_version == 0x05) {
+    // New ELF - aie2ps_group, aie2ps, or aie4 family
+    if (os_abi != elf_amd_aie2ps_group &&
+        os_abi != elf_amd_aie2ps &&
+        os_abi != elf_amd_aie4 &&
+        os_abi != elf_amd_aie4a &&
+        os_abi != elf_amd_aie4z)
+      throw error(error::error_code::invalid_input, "Only aie2ps/aie4 family elf supported\n");
+  } else {
+    throw error(error::error_code::invalid_input, "Unsupported ELF ABI version: 0x"
+                + ELFIO::to_hex_string(abi_version) + "\n");
+  }
 }
 
 /**
@@ -942,23 +957,33 @@ update_rela_sections(const std::vector<arginfo>& entries, const std::string& ker
  std::vector<char>
  transform_manager::
  update_kernel_name(const std::string& orig_name, const std::string& new_name) {
-   // Validate ELF format: support AIE2PS group (0x46) and AIE4 family (0x4B, 0x56, 0x69)
+   // Validate ELF format based on version
    auto os_abi = m_elfio.get_os_abi();
    auto abi_version = m_elfio.get_abi_version();
 
-   if (os_abi != elf_amd_aie2ps_group &&
-       os_abi != elf_amd_aie4 &&
-       os_abi != elf_amd_aie4a &&
-       os_abi != elf_amd_aiez)
+   // Legacy ELF (version 0x02/0x03): only aie2ps_group is supported
+   // New ELF (version 0x04/0x05): aie2ps_group, aie2ps, aie4, aie4a, aie4z are supported
+   if (abi_version == 0x02 || abi_version == 0x03) {
+     // Legacy ELF - only aie2ps_group
+     if (os_abi != elf_amd_aie2ps_group)
+       throw error(error::error_code::invalid_input,
+                   "update_kernel_name only supports OS ABI 0x46 for legacy ELF version, got: 0x"
+                   + ELFIO::to_hex_string(os_abi));
+   } else if (abi_version == 0x04 || abi_version == 0x05) {
+     // New ELF - aie2ps_group, aie2ps, or aie4 family
+     if (os_abi != elf_amd_aie2ps_group &&
+         os_abi != elf_amd_aie2ps &&
+         os_abi != elf_amd_aie4 &&
+         os_abi != elf_amd_aie4a &&
+         os_abi != elf_amd_aie4z)
+       throw error(error::error_code::invalid_input,
+                   "update_kernel_name only supports OS ABI 0x40/0x46/0x4B/0x56/0x69 for new ELF version, got: 0x"
+                   + ELFIO::to_hex_string(os_abi));
+   } else {
      throw error(error::error_code::invalid_input,
-                 "update_kernel_name only supports OS ABI 0x46/0x4B/0x56/0x69, got: 0x"
-                 + ELFIO::to_hex_string(os_abi));
-
-   // ABI version 0x3 for aie2ps config, 0x5 for aie4 config
-   if (abi_version != 0x3 && abi_version != 0x5)
-     throw error(error::error_code::invalid_input,
-                 "update_kernel_name only supports ABI version 0x3 or 0x5, got: 0x"
+                 "update_kernel_name only supports ABI version 0x02/0x03/0x04/0x05, got: 0x"
                  + ELFIO::to_hex_string(abi_version));
+   }
 
    // Locate required ELF sections
    auto symtab = m_elfio.sections[".symtab"];
