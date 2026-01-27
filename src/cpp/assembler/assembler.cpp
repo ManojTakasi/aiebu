@@ -100,10 +100,14 @@ void
 assembler::
 configure_elf_for_target(const std::string& parsed_target)
 {
+  // Only config ELFs get updated based on .target directive
+  // Non-config ELFs always use legacy values (version 0x02, OSABI = aie2ps_group)
+  if (m_elf_type != elf_type::aie4_config && m_elf_type != elf_type::aie2ps_config)
+    return;
+
   std::string normalized = normalize_target_format(parsed_target);
 
   unsigned char os_abi = 0;
-  unsigned char version = 0;
 
   // Determine OS ABI based on specific target
   if (normalized == "aie2ps") {
@@ -119,26 +123,9 @@ configure_elf_for_target(const std::string& parsed_target)
                 "Unknown target in .target directive: " + parsed_target);
   }
 
-  // Determine version based on elf_type (config vs non-config)
-  switch (m_elf_type) {
-    case elf_type::aie4_asm:
-    case elf_type::aie2ps_asm:
-      version = elf_version_new;
-      break;
-
-    case elf_type::aie4_config:
-    case elf_type::aie2ps_config:
-      version = elf_version_new_config;
-      break;
-
-    default:
-      // For other types, don't modify ELF settings
-      return;
-  }
-
-  // Configure the ELF writer with new OS ABI and version
+  // Config ELFs with .target use version 0x20 (2.0) and specific OSABI
   m_elfwriter->set_os_abi(os_abi);
-  m_elfwriter->set_abi_version(version);
+  m_elfwriter->set_abi_version(elf_version_config);
 }
 
 void
@@ -261,12 +248,14 @@ process(const std::vector<char>& buffer1,
   if (target && target->is_set()) {
     // .target is present in ASM:
     // 1. Validate that target belongs to correct family for the -t option
-    // 2. Configure ELF with new version (0x04/0x05) and specific OSABI
+    // 2. For config ELFs: set version 0x20 and specific OSABI
+    // 3. For non-config ELFs: keep legacy values (no change)
     validate_target_family(target);
     configure_elf_for_target(target);
   }
   // If no .target directive: ELF writer keeps legacy defaults
-  // (version 0x02/0x03, OSABI = aie2ps_group = 0x46)
+  // Non-config: version 0x02, OSABI = aie2ps_group (0x46)
+  // Config: version 0x03, OSABI = aie2ps_group (0x46)
 
   auto w = m_enoder->process(ppo);
   auto u = m_elfwriter->process(w);

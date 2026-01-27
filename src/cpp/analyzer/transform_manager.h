@@ -10,7 +10,7 @@
 #include <elfio/elfio.hpp>
 #include "specification/aie2ps/isa.h"
 #include "common/symbol.h"
-#include "elf/aie4/aie4_elfwriter.h"
+#include "elf/aie_elf_constants.h"
 
 namespace aiebu {
 
@@ -240,10 +240,12 @@ public:
    * @param elf_data Vector containing ELF binary data
    *
    * Supported ELF versions:
-   * - Version 0x02/0x03 (legacy): Only OS ABI 0x46 (aie2ps_group)
-   * - Version 0x04/0x05 (new): OS ABI 0x40/0x46/0x4B/0x56/0x69 (aie2ps, aie2ps_group, aie4, aie4a, aie4z)
+   * - Version 0x02 (non-config): OS ABI 0x45/0x46 (aie2p, aie2ps_group)
+   * - Version 0x03 (legacy config): OS ABI 0x46 (aie2ps_group)
+   * - Version 0x10 (aie2p config): OS ABI 0x45 (aie2p)
+   * - Version 0x20 (config with .target): OS ABI 0x40/0x45/0x46/0x4B/0x56/0x69
    *
-   * @throws error if ELF data is invalid or not AIE2PS/AIE4 format
+   * @throws error if ELF data is invalid or not supported format
    */
   void load_elf(const std::vector<char>& elf_data);
 
@@ -301,8 +303,10 @@ public:
    * For non-mangled names, does exact string matching.
    *
    * Supported ELF versions:
-   * - Version 0x02/0x03 (legacy): Only OS ABI 0x46 (aie2ps_group)
-   * - Version 0x04/0x05 (new): OS ABI 0x40/0x46/0x4B/0x56/0x69 (aie2ps, aie2ps_group, aie4, aie4a, aie4z)
+   * - Version 0x02 (non-config): OS ABI 0x45/0x46 (aie2p, aie2ps_group)
+   * - Version 0x03 (legacy config): OS ABI 0x46 (aie2ps_group)
+   * - Version 0x10 (aie2p config): OS ABI 0x45 (aie2p)
+   * - Version 0x20 (config with .target): OS ABI 0x40/0x45/0x46/0x4B/0x56/0x69
    *
    * @throws error if format unsupported, sections missing, or name not found
    */
